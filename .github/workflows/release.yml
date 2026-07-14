@@ -46,13 +46,13 @@ jobs:
           flutter test
           flutter build apk --release
           mv build/app/outputs/flutter-apk/app-release.apk \
-            "build/app/outputs/flutter-apk/real-liquid-glass-demo-${GITHUB_REF_NAME}.apk"
+            "build/app/outputs/flutter-apk/liquid-music-${GITHUB_REF_NAME}.apk"
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            "build/app/outputs/flutter-apk/real-liquid-glass-demo-${GITHUB_REF_NAME}.apk" \
-            --title "Real Liquid Glass Demo ${GITHUB_REF_NAME}" \
+            "build/app/outputs/flutter-apk/liquid-music-${GITHUB_REF_NAME}.apk" \
+            --title "Liquid Music ${GITHUB_REF_NAME}" \
             --generate-notes
