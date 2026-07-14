@@ -5,6 +5,7 @@
 ## 功能
 
 - 展示 `LiquidGlassContainer`、胶囊容器和 `LiquidGlassBottomBar`。
+- Apple Music 风格的柔白模糊背景、浅色玻璃和红色交互强调。
 - 实时调节 Android fallback 的 `fallbackIntensity`。
 - 从本仓库的 GitHub Releases 检查新版 APK。
 - 在应用内下载更新并唤起 Android 系统安装器。
