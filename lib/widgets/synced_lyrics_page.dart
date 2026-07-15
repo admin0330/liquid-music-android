@@ -110,7 +110,25 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
               child: Column(
                 children: [
                   _CompactHeader(track: track),
-                  Expanded(child: _lyrics()),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: _lyrics()),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          child: _LyricsEdgeBlur(edge: _LyricsEdge.top),
+                        ),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _LyricsEdgeBlur(edge: _LyricsEdge.bottom),
+                        ),
+                      ],
+                    ),
+                  ),
                   _PlaybackBar(controller: widget.controller),
                 ],
               ),
@@ -141,7 +159,7 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
     }
     return ListView.builder(
       controller: scroll,
-      padding: const EdgeInsets.fromLTRB(26, 100, 26, 180),
+      padding: const EdgeInsets.fromLTRB(26, 64, 26, 72),
       itemCount: lines.length,
       itemBuilder: (_, index) {
         final distance = (index - activeLine).abs();
@@ -165,49 +183,87 @@ class _CompactHeader extends StatelessWidget {
   final MusicTrack track;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
-    child: Row(
-      children: [
-        IconButton.filledTonal(
-          onPressed: () => Navigator.pop(context),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: .12),
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(CupertinoIcons.chevron_down),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                track.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
+  Widget build(BuildContext context) => ClipRect(
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+        color: const Color(0xFF1B1014).withValues(alpha: .42),
+        child: Row(
+          children: [
+            IconButton.filledTonal(
+              onPressed: () => Navigator.pop(context),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: .12),
+                foregroundColor: Colors.white,
               ),
-              Text(
-                track.artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
+              icon: const Icon(CupertinoIcons.chevron_down),
+            ),
+            const Spacer(),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    track.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    track.artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            _SmallArtwork(track: track),
+          ],
         ),
-        const SizedBox(width: 10),
-        _SmallArtwork(track: track),
-      ],
+      ),
     ),
   );
+}
+
+enum _LyricsEdge { top, bottom }
+
+class _LyricsEdgeBlur extends StatelessWidget {
+  const _LyricsEdgeBlur({required this.edge});
+
+  final _LyricsEdge edge;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = edge == _LyricsEdge.bottom;
+    return IgnorePointer(
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            height: bottom ? 72 : 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: bottom
+                    ? const [Color(0x001B1014), Color(0xB8E8E3E5)]
+                    : const [Color(0xB81B1014), Color(0x001B1014)],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SmallArtwork extends StatelessWidget {
@@ -297,38 +353,37 @@ class _PlaybackBar extends StatelessWidget {
     final playback = controller.playback;
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: .2),
-            border: const Border(top: BorderSide(color: Color(0x24FFFFFF))),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed: playback.previous,
-                color: Colors.white,
-                iconSize: 30,
-                icon: const Icon(CupertinoIcons.backward_fill),
-              ),
-              const SizedBox(width: 18),
-              AppleMusicPlayButton(
-                playing: playback.playing,
-                onPressed: playback.toggle,
-                color: Colors.white,
-                size: 72,
-                iconSize: 48,
-              ),
-              const SizedBox(width: 18),
-              IconButton(
-                onPressed: playback.next,
-                color: Colors.white,
-                iconSize: 30,
-                icon: const Icon(CupertinoIcons.forward_fill),
-              ),
-            ],
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: SizedBox(
+          height: 112,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8E3E5).withValues(alpha: .86),
+              border: const Border(top: BorderSide(color: Color(0x38FFFFFF))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: playback.previous,
+                  color: const Color(0xFF1D1D1F),
+                  iconSize: 36,
+                  icon: const Icon(CupertinoIcons.backward_fill),
+                ),
+                const SizedBox(width: 16),
+                AppleMusicPlayButton(
+                  playing: playback.playing,
+                  onPressed: playback.toggle,
+                ),
+                const SizedBox(width: 16),
+                IconButton(
+                  onPressed: playback.next,
+                  color: const Color(0xFF1D1D1F),
+                  iconSize: 36,
+                  icon: const Icon(CupertinoIcons.forward_fill),
+                ),
+              ],
+            ),
           ),
         ),
       ),

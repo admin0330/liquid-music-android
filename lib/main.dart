@@ -122,7 +122,17 @@ class _MusicShellState extends State<MusicShell> {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: widget.controller,
     builder: (context, _) {
-      final bottom = widget.controller.playback.current == null ? 82.0 : 154.0;
+      const dockHeight = 58.0;
+      const dockOuterBottom = 5.0;
+      const dockGap = 8.0;
+      const miniPlayerHeight = 68.0;
+      const contentGap = 16.0;
+      final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
+      final dockTop = safeBottom + dockOuterBottom + dockHeight;
+      final miniPlayerBottom = dockTop + dockGap;
+      final bottom = widget.controller.playback.current == null
+          ? dockTop + contentGap
+          : miniPlayerBottom + miniPlayerHeight + contentGap;
       return Scaffold(
         extendBody: true,
         body: Stack(
@@ -158,7 +168,7 @@ class _MusicShellState extends State<MusicShell> {
               Positioned(
                 left: 10,
                 right: 10,
-                bottom: 76,
+                bottom: miniPlayerBottom,
                 child: MiniPlayer(
                   controller: widget.controller,
                   onTap: openPlayer,
@@ -241,49 +251,102 @@ class TelegramDock extends StatelessWidget {
             final item = _items[index];
             final selected = index == selectedIndex;
             return Expanded(
-              child: Semantics(
-                selected: selected,
-                button: true,
+              child: _DockDestination(
+                icon: item.icon,
+                selectedIcon: item.selected,
                 label: item.label,
-                child: InkWell(
-                  onTap: () => onSelected(index),
-                  borderRadius: BorderRadius.circular(22),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? const Color(0x14FA2D48)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          selected ? item.selected : item.icon,
-                          color: selected ? musicRed : mutedInk,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            color: selected ? musicRed : mutedInk,
-                            fontSize: 10,
-                            height: 1,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                selected: selected,
+                onTap: () => onSelected(index),
               ),
             );
           }),
+        ),
+      ),
+    ),
+  );
+}
+
+class _DockDestination extends StatefulWidget {
+  const _DockDestination({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_DockDestination> createState() => _DockDestinationState();
+}
+
+class _DockDestinationState extends State<_DockDestination> {
+  bool pressed = false;
+
+  void _setPressed(bool value) {
+    if (pressed != value) setState(() => pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: widget.selected,
+    button: true,
+    label: widget.label,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _setPressed(true),
+      onTapCancel: () => _setPressed(false),
+      onTapUp: (_) {
+        _setPressed(false);
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: pressed ? .94 : 1,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: pressed
+                ? const Color(0x14000000)
+                : widget.selected
+                ? const Color(0x14FA2D48)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Icon(
+                  widget.selected ? widget.selectedIcon : widget.icon,
+                  key: ValueKey(widget.selected),
+                  color: widget.selected ? musicRed : mutedInk,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  color: widget.selected ? musicRed : mutedInk,
+                  fontSize: 10,
+                  height: 1,
+                  fontWeight: widget.selected
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -1376,7 +1439,6 @@ class _PlayerSheetState extends State<PlayerSheet> {
                 ),
                 PlayerAction(
                   icon: CupertinoIcons.text_quote,
-                  active: track.lyrics?.isNotEmpty == true,
                   label: '歌词',
                   onTap: () => lyricsSheet(context, widget.controller, track),
                 ),
@@ -1487,7 +1549,7 @@ class PositionSlider extends StatelessWidget {
   );
 }
 
-class PlayerAction extends StatelessWidget {
+class PlayerAction extends StatefulWidget {
   const PlayerAction({
     super.key,
     required this.icon,
@@ -1499,21 +1561,52 @@ class PlayerAction extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool active;
+
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(14),
-    child: Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Icon(icon, color: active ? musicRed : ink),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: active ? musicRed : mutedInk),
+  State<PlayerAction> createState() => _PlayerActionState();
+}
+
+class _PlayerActionState extends State<PlayerAction> {
+  bool pressed = false;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: widget.label,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => pressed = true),
+      onTapCancel: () => setState(() => pressed = false),
+      onTapUp: (_) {
+        setState(() => pressed = false);
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: pressed ? .94 : 1,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: pressed ? const Color(0x0F000000) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
           ),
-        ],
+          child: Column(
+            children: [
+              Icon(widget.icon, color: widget.active ? musicRed : ink),
+              const SizedBox(height: 4),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: widget.active ? musicRed : mutedInk,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     ),
   );
