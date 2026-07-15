@@ -12,6 +12,7 @@ import 'github_update_service.dart';
 import 'models/music_models.dart';
 import 'services/music_controller.dart';
 import 'services/subsonic_service.dart';
+import 'widgets/synced_lyrics_page.dart';
 
 const ink = Color(0xFF1D1D1F);
 const mutedInk = Color(0xFF6E6E73);
@@ -77,7 +78,10 @@ class _LiquidMusicAppState extends State<LiquidMusicApp> {
       ),
       dividerColor: const Color(0x16000000),
       pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {TargetPlatform.android: CupertinoPageTransitionsBuilder()},
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeForwardsPageTransitionsBuilder(),
+        },
       ),
     ),
     home: MusicShell(controller: controller),
@@ -94,22 +98,20 @@ class MusicShell extends StatefulWidget {
 class _MusicShellState extends State<MusicShell> {
   int tab = 0;
 
-  void openPlayer() => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => PlayerSheet(controller: widget.controller),
+  void openPlayer() => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => PlayerSheet(controller: widget.controller),
+    ),
   );
 
   void openAlbum(MusicAlbum album) => Navigator.of(context).push(
-    CupertinoPageRoute(
+    MaterialPageRoute<void>(
       builder: (_) => AlbumScreen(controller: widget.controller, album: album),
     ),
   );
 
   void openPlaylist(MusicPlaylist playlist) => Navigator.of(context).push(
-    CupertinoPageRoute(
+    MaterialPageRoute<void>(
       builder: (_) =>
           PlaylistScreen(controller: widget.controller, playlist: playlist),
     ),
@@ -1155,34 +1157,54 @@ class _PlayerSheetState extends State<PlayerSheet> {
       builder: (_, _) {
         final track = playback.current;
         if (track == null) return const SizedBox.shrink();
-        return SizedBox(
-          height: MediaQuery.sizeOf(context).height,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-              child: Material(
-                color: const Color(0xFFF3F3F5).withValues(alpha: .94),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    Container(
-                      width: 38,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: const Color(0x33000000),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
+        return Scaffold(
+          backgroundColor: const Color(0xFFF3F3F5),
+          body: SafeArea(
+            child: SizedBox(
+              height: MediaQuery.sizeOf(context).height,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                  child: Material(
+                    color: const Color(0xFFF3F3F5).withValues(alpha: .94),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                          child: Row(
+                            children: [
+                              IconButton.filledTonal(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(CupertinoIcons.chevron_down),
+                              ),
+                              const Spacer(),
+                              const Text(
+                                '正在播放',
+                                style: TextStyle(
+                                  color: mutedInk,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const Spacer(),
+                              const SizedBox(width: 48),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: showQueue
+                                ? queueView(playback)
+                                : playerView(track, playback),
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: showQueue
-                            ? queueView(playback)
-                            : playerView(track, playback),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -2371,47 +2393,9 @@ Future<void> lyricsSheet(
   BuildContext context,
   MusicController controller,
   MusicTrack track,
-) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  builder: (_) => DraggableScrollableSheet(
-    expand: false,
-    initialChildSize: .72,
-    maxChildSize: .94,
-    builder: (_, scroll) => ListView(
-      controller: scroll,
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 40),
-      children: [
-        Text(
-          track.title,
-          style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-        ),
-        Text(
-          track.artist,
-          style: const TextStyle(color: musicRed, fontSize: 17),
-        ),
-        const SizedBox(height: 24),
-        FutureBuilder<String?>(
-          future: controller.lyricsFor(track),
-          builder: (_, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return Text(
-              snapshot.data?.trim().isNotEmpty == true
-                  ? snapshot.data!
-                  : '这首歌曲没有可用歌词。\n\n本地歌曲支持读取内嵌歌词；服务器歌词由 Subsonic 接口提供。',
-              style: const TextStyle(
-                fontSize: 20,
-                height: 1.75,
-                fontWeight: FontWeight.w600,
-              ),
-            );
-          },
-        ),
-      ],
-    ),
+) => Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => SyncedLyricsPage(controller: controller, track: track),
   ),
 );
 
