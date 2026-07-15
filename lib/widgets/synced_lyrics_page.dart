@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../models/music_models.dart';
 import '../services/music_controller.dart';
+import 'apple_music_play_button.dart';
 
 class SyncedLyricsPage extends StatefulWidget {
   const SyncedLyricsPage({
@@ -149,7 +150,6 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: _KaraokeLine(
             line: lines[index],
-            position: position,
             active: index == activeLine,
             near: distance == 1,
             onTap: () => widget.controller.playback.seek(lines[index].start),
@@ -223,9 +223,14 @@ class _SmallArtwork extends StatelessWidget {
     } else if (track.coverUrl?.isNotEmpty == true) {
       image = Image.network(track.coverUrl!, fit: BoxFit.cover);
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox.square(dimension: 58, child: image),
+    return Hero(
+      tag: 'lyrics-artwork-${track.id}',
+      createRectTween: (begin, end) =>
+          MaterialRectCenterArcTween(begin: begin, end: end),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox.square(dimension: 58, child: image),
+      ),
     );
   }
 }
@@ -233,92 +238,51 @@ class _SmallArtwork extends StatelessWidget {
 class _KaraokeLine extends StatelessWidget {
   const _KaraokeLine({
     required this.line,
-    required this.position,
     required this.active,
     required this.near,
     required this.onTap,
   });
 
   final _LyricLine line;
-  final Duration position;
   final bool active;
   final bool near;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    if (!active) {
-      return GestureDetector(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedScale(
+        scale: active ? 1 : (near ? .975 : .95),
+        alignment: Alignment.centerLeft,
+        duration: const Duration(milliseconds: 520),
+        curve: Curves.easeOutCubic,
         child: ImageFiltered(
           imageFilter: ImageFilter.blur(
-            sigmaX: near ? .35 : .9,
-            sigmaY: near ? .35 : .9,
+            sigmaX: active ? 0 : (near ? .35 : 1.05),
+            sigmaY: active ? 0 : (near ? .35 : 1.05),
           ),
           child: AnimatedOpacity(
-            opacity: near ? .38 : .16,
-            duration: const Duration(milliseconds: 360),
-            child: Text(
-              line.text,
-              style: const TextStyle(
+            opacity: active ? 1 : (near ? .38 : .15),
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeOut,
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 27,
+                fontSize: active ? 31 : 27,
                 height: 1.18,
                 fontWeight: FontWeight.w800,
-                letterSpacing: -.5,
+                letterSpacing: active ? -.7 : -.5,
+                shadows: active
+                    ? const [Shadow(color: Color(0x55FFFFFF), blurRadius: 18)]
+                    : null,
               ),
+              child: Text(line.text),
             ),
           ),
         ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Wrap(
-        children: [
-          for (final token in line.tokens)
-            _KaraokeToken(token: token, position: position),
-        ],
-      ),
-    );
-  }
-}
-
-class _KaraokeToken extends StatelessWidget {
-  const _KaraokeToken({required this.token, required this.position});
-  final _LyricToken token;
-  final Duration position;
-
-  @override
-  Widget build(BuildContext context) {
-    final elapsed = position - token.start;
-    final span = token.end - token.start;
-    final progress = span.inMilliseconds <= 0
-        ? 1.0
-        : (elapsed.inMilliseconds / span.inMilliseconds).clamp(0.0, 1.0);
-    final future = progress <= 0;
-    final current = progress > 0 && progress < 1;
-    final blur = future ? 1.7 : (current ? (1 - progress) * 1.2 : 0.0);
-
-    return AnimatedDefaultTextStyle(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      style: TextStyle(
-        color: future
-            ? Colors.white.withValues(alpha: .28)
-            : Colors.white.withValues(alpha: .72 + progress * .28),
-        fontSize: 31,
-        height: 1.18,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -.7,
-        shadows: current
-            ? const [Shadow(color: Color(0x99FFFFFF), blurRadius: 18)]
-            : null,
-      ),
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Text(token.text),
       ),
     );
   }
@@ -350,27 +314,12 @@ class _PlaybackBar extends StatelessWidget {
                 icon: const Icon(CupertinoIcons.backward_fill),
               ),
               const SizedBox(width: 18),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 340),
-                curve: Curves.easeOutBack,
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(
-                    playback.playing ? 32 : 20,
-                  ),
-                ),
-                child: IconButton(
-                  onPressed: playback.toggle,
-                  color: const Color(0xFF24151A),
-                  iconSize: 30,
-                  icon: Icon(
-                    playback.playing
-                        ? CupertinoIcons.pause_fill
-                        : CupertinoIcons.play_fill,
-                  ),
-                ),
+              AppleMusicPlayButton(
+                playing: playback.playing,
+                onPressed: playback.toggle,
+                color: Colors.white,
+                size: 72,
+                iconSize: 48,
               ),
               const SizedBox(width: 18),
               IconButton(
@@ -408,19 +357,6 @@ class _LyricsBackdrop extends StatelessWidget {
 
 class _LyricLine {
   const _LyricLine({
-    required this.text,
-    required this.start,
-    required this.end,
-    required this.tokens,
-  });
-  final String text;
-  final Duration start;
-  final Duration end;
-  final List<_LyricToken> tokens;
-}
-
-class _LyricToken {
-  const _LyricToken({
     required this.text,
     required this.start,
     required this.end,
@@ -483,45 +419,8 @@ abstract final class _LyricsParser {
   }
 
   static _LyricLine _line(String value, Duration start, Duration end) {
-    final matches = _wordStamp.allMatches(value).toList();
-    if (matches.isNotEmpty) {
-      final tokens = <_LyricToken>[];
-      for (var i = 0; i < matches.length; i++) {
-        final match = matches[i];
-        final tokenStart = _time(match.group(1)!, match.group(2)!);
-        final tokenEnd = i + 1 < matches.length
-            ? _time(matches[i + 1].group(1)!, matches[i + 1].group(2)!)
-            : end;
-        final textEnd = i + 1 < matches.length
-            ? matches[i + 1].start
-            : value.length;
-        final text = value.substring(match.end, textEnd);
-        if (text.isNotEmpty) {
-          tokens.add(_LyricToken(text: text, start: tokenStart, end: tokenEnd));
-        }
-      }
-      return _LyricLine(
-        text: tokens.map((e) => e.text).join(),
-        start: start,
-        end: end,
-        tokens: tokens,
-      );
-    }
-
-    final glyphs = value.runes.map(String.fromCharCode).toList();
-    if (glyphs.isEmpty) {
-      return _LyricLine(text: value, start: start, end: end, tokens: const []);
-    }
-    final span = end - start;
-    final unit = span.inMilliseconds / glyphs.length;
-    final tokens = List.generate(glyphs.length, (index) {
-      return _LyricToken(
-        text: glyphs[index],
-        start: start + Duration(milliseconds: (unit * index).round()),
-        end: start + Duration(milliseconds: (unit * (index + 1)).round()),
-      );
-    });
-    return _LyricLine(text: value, start: start, end: end, tokens: tokens);
+    final text = value.replaceAll(_wordStamp, '').trim();
+    return _LyricLine(text: text, start: start, end: end);
   }
 
   static Duration _time(String minutes, String seconds) => Duration(

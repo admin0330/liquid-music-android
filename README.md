@@ -14,7 +14,8 @@
 - Android 14+ USB DAC 独占 / bit-perfect 输出（需设备和厂商音频驱动支持）。
 - Telegram Android 风格的紧凑底栏，以及受 [Bunpod](https://github.com/kamranbekirovyz/bunpod) 视觉语言启发的原创播放按钮与专辑卡片。
 - Bunpod 同款 Material 3 Fade Forwards 页面切换节奏；播放器与专辑详情使用独立路由。
-- 独立沉浸式歌词播放器：标题和封面收纳在右上角，支持 LRC、增强型逐字时间标签，以及 Apple Music 风格的逐字高亮、模糊和自动滚动。
+- 点击“歌词”后由封面 Hero 动画丝滑进入沉浸式歌词播放器；标题和封面收纳在右上角，支持 LRC、Apple Music 风格的逐行高亮、模糊和自动滚动。
+- Now Playing 与歌词页使用 Apple Music 风格的无底色大号实心播放/暂停控制。
 - 从本仓库 GitHub Releases 检查更新、下载 APK 并调用系统安装器覆盖升级。
 
 ## 音乐来源

@@ -12,6 +12,7 @@ import 'github_update_service.dart';
 import 'models/music_models.dart';
 import 'services/music_controller.dart';
 import 'services/subsonic_service.dart';
+import 'widgets/apple_music_play_button.dart';
 import 'widgets/synced_lyrics_page.dart';
 
 const ink = Color(0xFF1D1D1F);
@@ -127,7 +128,7 @@ class _MusicShellState extends State<MusicShell> {
         body: Stack(
           children: [
             const Positioned.fill(child: FrostedBackground()),
-            IndexedStack(
+            SmoothPageStack(
               index: tab,
               children: [
                 HomePage(
@@ -286,6 +287,54 @@ class TelegramDock extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class SmoothPageStack extends StatelessWidget {
+  const SmoothPageStack({
+    super.key,
+    required this.index,
+    required this.children,
+  });
+
+  final int index;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: List.generate(children.length, (i) {
+      final selected = i == index;
+      final offset = selected
+          ? Offset.zero
+          : Offset(i < index ? -.035 : .035, 0);
+      return Positioned.fill(
+        child: IgnorePointer(
+          ignoring: !selected,
+          child: ExcludeSemantics(
+            excluding: !selected,
+            child: TickerMode(
+              enabled: selected,
+              child: AnimatedSlide(
+                offset: offset,
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                child: AnimatedScale(
+                  scale: selected ? 1 : .985,
+                  duration: const Duration(milliseconds: 380),
+                  curve: Curves.easeOutCubic,
+                  child: AnimatedOpacity(
+                    opacity: selected ? 1 : 0,
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOut,
+                    child: children[i],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }),
   );
 }
 
@@ -1120,13 +1169,11 @@ class MiniPlayer extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
+              AppleMusicPlayButton(
+                playing: playback.playing,
                 onPressed: playback.toggle,
-                icon: Icon(
-                  playback.playing
-                      ? CupertinoIcons.pause_fill
-                      : CupertinoIcons.play_fill,
-                ),
+                size: 48,
+                iconSize: 27,
               ),
               IconButton(
                 onPressed: playback.next,
@@ -1223,11 +1270,16 @@ class _PlayerSheetState extends State<PlayerSheet> {
             LayoutBuilder(
               builder: (_, constraints) {
                 final size = math.min(constraints.maxWidth, 360.0);
-                return Artwork(
-                  track: track,
-                  size: size,
-                  radius: 28,
-                  shadow: true,
+                return Hero(
+                  tag: 'lyrics-artwork-${track.id}',
+                  createRectTween: (begin, end) =>
+                      MaterialRectCenterArcTween(begin: begin, end: end),
+                  child: Artwork(
+                    track: track,
+                    size: size,
+                    radius: 28,
+                    shadow: true,
+                  ),
                 );
               },
             ),
@@ -1281,10 +1333,9 @@ class _PlayerSheetState extends State<PlayerSheet> {
                   iconSize: 36,
                   icon: const Icon(CupertinoIcons.backward_fill),
                 ),
-                ExpressivePlayButton(
+                AppleMusicPlayButton(
                   playing: playback.playing,
                   onPressed: playback.toggle,
-                  size: 82,
                 ),
                 IconButton(
                   onPressed: playback.next,
@@ -2393,11 +2444,37 @@ Future<void> lyricsSheet(
   BuildContext context,
   MusicController controller,
   MusicTrack track,
-) => Navigator.of(context).push(
-  MaterialPageRoute<void>(
-    builder: (_) => SyncedLyricsPage(controller: controller, track: track),
-  ),
-);
+) async {
+  HapticFeedback.selectionClick();
+  await Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      transitionDuration: const Duration(milliseconds: 560),
+      reverseTransitionDuration: const Duration(milliseconds: 420),
+      pageBuilder: (_, _, _) =>
+          SyncedLyricsPage(controller: controller, track: track),
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, .025),
+              end: Offset.zero,
+            ).animate(curved),
+            child: ScaleTransition(
+              scale: Tween(begin: .985, end: 1.0).animate(curved),
+              child: child,
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 
 Future<void> createPlaylistDialog(
   BuildContext context,
