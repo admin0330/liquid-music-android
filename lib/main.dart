@@ -103,11 +103,8 @@ class MusicShell extends StatefulWidget {
 class _MusicShellState extends State<MusicShell> {
   int tab = 0;
 
-  void openPlayer() => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => PlayerSheet(controller: widget.controller),
-    ),
-  );
+  void openPlayer() =>
+      Navigator.of(context).push(playerRoute(widget.controller));
 
   Future<void> openAlbum(MusicAlbum album) async {
     final selected = await Navigator.of(context).push<int>(
@@ -1453,6 +1450,30 @@ class PlayerSheet extends StatefulWidget {
   State<PlayerSheet> createState() => _PlayerSheetState();
 }
 
+PageRoute<void> playerRoute(MusicController controller) =>
+    PageRouteBuilder<void>(
+      opaque: true,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, _, _) =>
+          RepaintBoundary(child: PlayerSheet(controller: controller)),
+      transitionsBuilder: (_, animation, _, child) {
+        final motion = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(motion),
+          child: child,
+        );
+      },
+    );
+
 class _PlayerSheetState extends State<PlayerSheet> {
   bool showQueue = false;
   @override
@@ -1468,49 +1489,41 @@ class _PlayerSheetState extends State<PlayerSheet> {
           body: SafeArea(
             child: SizedBox(
               height: MediaQuery.sizeOf(context).height,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                  child: Material(
-                    color: const Color(0xFFF3F3F5).withValues(alpha: .94),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-                          child: Row(
-                            children: [
-                              IconButton.filledTonal(
-                                onPressed: () => Navigator.pop(context),
-                                icon: const Icon(CupertinoIcons.chevron_down),
-                              ),
-                              const Spacer(),
-                              const Text(
-                                '正在播放',
-                                style: TextStyle(
-                                  color: mutedInk,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Spacer(),
-                              const SizedBox(width: 48),
-                            ],
+              child: Material(
+                color: const Color(0xFFF3F3F5),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                      child: Row(
+                        children: [
+                          IconButton.filledTonal(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(CupertinoIcons.chevron_down),
                           ),
-                        ),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: showQueue
-                                ? queueView(playback)
-                                : playerView(track, playback),
+                          const Spacer(),
+                          const Text(
+                            '正在播放',
+                            style: TextStyle(
+                              color: mutedInk,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                      ],
+                          const Spacer(),
+                          const SizedBox(width: 48),
+                        ],
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: showQueue
+                            ? queueView(playback)
+                            : playerView(track, playback),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -2065,12 +2078,9 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   child: MiniPlayer(
                     controller: widget.controller,
                     dark: true,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            PlayerSheet(controller: widget.controller),
-                      ),
-                    ),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).push(playerRoute(widget.controller)),
                   ),
                 ),
               Positioned(
