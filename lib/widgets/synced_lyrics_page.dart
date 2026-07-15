@@ -110,25 +110,7 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
               child: Column(
                 children: [
                   _CompactHeader(track: track),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(child: _lyrics()),
-                        const Positioned(
-                          left: 0,
-                          right: 0,
-                          top: 0,
-                          child: _LyricsEdgeBlur(edge: _LyricsEdge.top),
-                        ),
-                        const Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: _LyricsEdgeBlur(edge: _LyricsEdge.bottom),
-                        ),
-                      ],
-                    ),
-                  ),
+                  Expanded(child: _lyrics()),
                   _PlaybackBar(controller: widget.controller),
                 ],
               ),
@@ -159,7 +141,7 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
     }
     return ListView.builder(
       controller: scroll,
-      padding: const EdgeInsets.fromLTRB(26, 64, 26, 72),
+      padding: const EdgeInsets.fromLTRB(26, 30, 26, 34),
       itemCount: lines.length,
       itemBuilder: (_, index) {
         final distance = (index - activeLine).abs();
@@ -169,7 +151,7 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
           child: _KaraokeLine(
             line: lines[index],
             active: index == activeLine,
-            near: distance == 1,
+            distance: distance,
             onTap: () => widget.controller.playback.seek(lines[index].start),
           ),
         );
@@ -183,87 +165,57 @@ class _CompactHeader extends StatelessWidget {
   final MusicTrack track;
 
   @override
-  Widget build(BuildContext context) => ClipRect(
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
-        color: const Color(0xFF1B1014).withValues(alpha: .42),
-        child: Row(
-          children: [
-            IconButton.filledTonal(
-              onPressed: () => Navigator.pop(context),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: .12),
-                foregroundColor: Colors.white,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+    child: Row(
+      children: [
+        _SmallArtwork(track: track),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                track.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              icon: const Icon(CupertinoIcons.chevron_down),
-            ),
-            const Spacer(),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    track.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    track.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
-                  ),
-                ],
+              Text(
+                track.artist,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
               ),
-            ),
-            const SizedBox(width: 10),
-            _SmallArtwork(track: track),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     ),
   );
 }
 
-enum _LyricsEdge { top, bottom }
-
-class _LyricsEdgeBlur extends StatelessWidget {
-  const _LyricsEdgeBlur({required this.edge});
-
-  final _LyricsEdge edge;
+class _BottomBackButton extends StatelessWidget {
+  const _BottomBackButton();
 
   @override
-  Widget build(BuildContext context) {
-    final bottom = edge == _LyricsEdge.bottom;
-    return IgnorePointer(
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            height: bottom ? 72 : 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: bottom
-                    ? const [Color(0x001B1014), Color(0xB8E8E3E5)]
-                    : const [Color(0xB81B1014), Color(0x001B1014)],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 42,
+    child: IconButton(
+      padding: EdgeInsets.zero,
+      onPressed: () => Navigator.pop(context),
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.white.withValues(alpha: .12),
+        foregroundColor: Colors.white,
       ),
-    );
-  }
+      icon: const Icon(CupertinoIcons.chevron_down, size: 21),
+    ),
+  );
 }
 
 class _SmallArtwork extends StatelessWidget {
@@ -295,31 +247,52 @@ class _KaraokeLine extends StatelessWidget {
   const _KaraokeLine({
     required this.line,
     required this.active,
-    required this.near,
+    required this.distance,
     required this.onTap,
   });
 
   final _LyricLine line;
   final bool active;
-  final bool near;
+  final int distance;
   final VoidCallback onTap;
+
+  double get blur => switch (distance) {
+    0 => 0,
+    1 => .35,
+    2 => .75,
+    3 => 1.15,
+    _ => 1.65,
+  };
+
+  double get opacity => switch (distance) {
+    0 => 1,
+    1 => .48,
+    2 => .28,
+    3 => .17,
+    _ => .1,
+  };
+
+  double get scale => switch (distance) {
+    0 => 1,
+    1 => .985,
+    2 => .97,
+    3 => .955,
+    _ => .94,
+  };
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedScale(
-        scale: active ? 1 : (near ? .975 : .95),
+        scale: scale,
         alignment: Alignment.centerLeft,
         duration: const Duration(milliseconds: 520),
         curve: Curves.easeOutCubic,
         child: ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: active ? 0 : (near ? .35 : 1.05),
-            sigmaY: active ? 0 : (near ? .35 : 1.05),
-          ),
+          imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: AnimatedOpacity(
-            opacity: active ? 1 : (near ? .38 : .15),
+            opacity: opacity,
             duration: const Duration(milliseconds: 420),
             curve: Curves.easeOut,
             child: AnimatedDefaultTextStyle(
@@ -327,7 +300,12 @@ class _KaraokeLine extends StatelessWidget {
               curve: Curves.easeOutCubic,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: active ? 31 : 27,
+                fontSize: switch (distance) {
+                  0 => 31,
+                  1 => 28,
+                  2 => 26,
+                  _ => 25,
+                },
                 height: 1.18,
                 fontWeight: FontWeight.w800,
                 letterSpacing: active ? -.7 : -.5,
@@ -351,41 +329,39 @@ class _PlaybackBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playback = controller.playback;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: SizedBox(
-          height: 112,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8E3E5).withValues(alpha: .86),
-              border: const Border(top: BorderSide(color: Color(0x38FFFFFF))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: playback.previous,
-                  color: const Color(0xFF1D1D1F),
-                  iconSize: 36,
-                  icon: const Icon(CupertinoIcons.backward_fill),
-                ),
-                const SizedBox(width: 16),
-                AppleMusicPlayButton(
-                  playing: playback.playing,
-                  onPressed: playback.toggle,
-                ),
-                const SizedBox(width: 16),
-                IconButton(
-                  onPressed: playback.next,
-                  color: const Color(0xFF1D1D1F),
-                  iconSize: 36,
-                  icon: const Icon(CupertinoIcons.forward_fill),
-                ),
-              ],
-            ),
+    return SizedBox(
+      height: 112,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Positioned(left: 16, child: _BottomBackButton()),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: playback.previous,
+                color: Colors.white,
+                iconSize: 36,
+                icon: const Icon(CupertinoIcons.backward_fill),
+              ),
+              const SizedBox(width: 12),
+              AppleMusicPlayButton(
+                playing: playback.playing,
+                onPressed: playback.toggle,
+                color: Colors.white,
+                size: 68,
+                iconSize: 46,
+              ),
+              const SizedBox(width: 12),
+              IconButton(
+                onPressed: playback.next,
+                color: Colors.white,
+                iconSize: 36,
+                icon: const Icon(CupertinoIcons.forward_fill),
+              ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }

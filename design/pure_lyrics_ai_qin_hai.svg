@@ -1,0 +1,57 @@
+<svg width="412" height="915" viewBox="0 0 412 915" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="36" y1="0" x2="376" y2="915" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5C2434"/>
+      <stop offset="0.5" stop-color="#211319"/>
+      <stop offset="1" stop-color="#0B0B10"/>
+    </linearGradient>
+    <radialGradient id="art" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(48 49) rotate(128) scale(77)">
+      <stop stop-color="#F3C7BE"/>
+      <stop offset="0.45" stop-color="#D17382"/>
+      <stop offset="1" stop-color="#56303A"/>
+    </radialGradient>
+    <filter id="blur1"><feGaussianBlur stdDeviation="0.35"/></filter>
+    <filter id="blur2"><feGaussianBlur stdDeviation="0.75"/></filter>
+    <filter id="blur3"><feGaussianBlur stdDeviation="1.15"/></filter>
+    <filter id="blur4"><feGaussianBlur stdDeviation="1.65"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="42"/></filter>
+    <filter id="activeGlow" x="-30%" y="-80%" width="160%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDeviation="9" flood-color="#FFFFFF" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="412" height="915" fill="url(#bg)"/>
+  <circle cx="360" cy="-2" r="126" fill="#B63859" fill-opacity="0.26" filter="url(#glow)"/>
+
+  <g id="floating-song-context">
+    <rect x="16" y="20" width="58" height="58" rx="14" fill="url(#art)"/>
+    <path d="M29 59C41 44 51 42 66 34" stroke="white" stroke-opacity="0.64" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="32" cy="39" r="8" fill="#F8E6DA" fill-opacity="0.7"/>
+    <text x="86" y="45" fill="#FFF9FC" font-family="Noto Sans TC" font-size="15" font-weight="700">愛琴海</text>
+    <text x="86" y="65" fill="#D1C2C9" font-family="Noto Sans TC" font-size="12">周杰倫</text>
+  </g>
+
+  <g id="lyrics" font-family="Noto Sans TC" font-weight="700" letter-spacing="-0.5">
+    <text x="26" y="145" fill="#98858E" fill-opacity="0.10" font-size="24" filter="url(#blur4)">藍白色的房 海風輕推開了窗</text>
+    <text x="26" y="202" fill="#98858E" fill-opacity="0.16" font-size="25" filter="url(#blur3)">愛琴海的浪帶不走你微笑臉龐</text>
+    <text x="26" y="261" fill="#B7A8AF" fill-opacity="0.27" font-size="26" filter="url(#blur2)">思緒追不上那道快落下的微光</text>
+    <text x="26" y="323" fill="#E6DADF" fill-opacity="0.48" font-size="28" filter="url(#blur1)">伊亞的教堂 鐘聲安靜的敲響</text>
+    <text x="26" y="395" fill="#FFF9FC" font-size="31" filter="url(#activeGlow)">熟悉的過往徘徊在</text>
+    <text x="26" y="435" fill="#FFF9FC" font-size="31" filter="url(#activeGlow)">階梯的遠方</text>
+    <text x="26" y="506" fill="#E6DADF" fill-opacity="0.46" font-size="28" filter="url(#blur1)">鵝黃色洋裝在你身上的那模樣</text>
+    <text x="26" y="571" fill="#B7A8AF" fill-opacity="0.28" font-size="26" filter="url(#blur2)">沖上岸的浪</text>
+    <text x="26" y="630" fill="#98858E" fill-opacity="0.17" font-size="25" filter="url(#blur3)">瓶裡的沙留住當初的信仰</text>
+    <text x="26" y="687" fill="#98858E" fill-opacity="0.10" font-size="24" filter="url(#blur4)">貝殼回頭望</text>
+  </g>
+
+  <g id="playback-controls" fill="#FFF9FC">
+    <path d="M151 826V854H146V826H151ZM177 828V852L155 840L177 828Z"/>
+    <path d="M217 814C220.5 814 223 816.5 223 820V860C223 863.5 220.5 866 217 866H211V814H217ZM201 814H207V866H201V814Z"/>
+    <path d="M261 828L283 840L261 852V828ZM287 826H292V854H287V826Z"/>
+  </g>
+
+  <g id="back-bottom-left">
+    <rect x="16" y="819" width="42" height="42" rx="21" fill="white" fill-opacity="0.12"/>
+    <path d="M28.75 835.5L37 843.75L45.25 835.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

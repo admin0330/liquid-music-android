@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/builtin_lyrics.dart';
 import '../models/music_models.dart';
 import 'download_service.dart';
 import 'local_library_service.dart';
@@ -292,6 +293,8 @@ class MusicController extends ChangeNotifier {
 
   Future<String?> lyricsFor(MusicTrack track) async {
     if (track.lyrics?.trim().isNotEmpty == true) return track.lyrics;
+    final builtin = builtinLyricsFor(title: track.title, artist: track.artist);
+    if (builtin != null) return builtin;
     if (track.source == MusicSourceKind.subsonic && _subsonic != null) {
       return _subsonic!.lyricsFor(track);
     }
