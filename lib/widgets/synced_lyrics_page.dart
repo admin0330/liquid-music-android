@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/music_models.dart';
 import '../services/music_controller.dart';
@@ -14,44 +16,60 @@ class SyncedLyricsPage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.track,
+    this.initialLyrics,
   });
 
   final MusicController controller;
   final MusicTrack track;
+  final String? initialLyrics;
 
   @override
   State<SyncedLyricsPage> createState() => _SyncedLyricsPageState();
 }
 
-class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
+class _SyncedLyricsPageState extends State<SyncedLyricsPage>
+    with SingleTickerProviderStateMixin {
   final scroll = ScrollController();
+  late final AnimationController dismissOffset;
   StreamSubscription<Duration>? positionSubscription;
   List<_LyricLine> lines = const [];
   List<GlobalKey> lineKeys = const [];
-  Duration position = Duration.zero;
   bool loading = true;
+  bool completingDismiss = false;
   int activeLine = -1;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    dismissOffset = AnimationController.unbounded(vsync: this);
+    final initial = widget.initialLyrics;
+    if (initial?.trim().isNotEmpty == true) {
+      _applyLyrics(initial!);
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _onPosition(widget.controller.playback.player.position),
+      );
+    } else {
+      _load();
+    }
     positionSubscription = widget.controller.playback.positionStream.listen(
       _onPosition,
     );
   }
 
-  Future<void> _load() async {
-    final raw = await widget.controller.lyricsFor(widget.track);
+  void _applyLyrics(String raw) {
     final duration = widget.track.duration > Duration.zero
         ? widget.track.duration
         : const Duration(minutes: 3, seconds: 30);
-    final parsed = _LyricsParser.parse(raw ?? '', duration);
+    lines = _LyricsParser.parse(raw, duration);
+    lineKeys = List.generate(lines.length, (_) => GlobalKey());
+    loading = false;
+  }
+
+  Future<void> _load() async {
+    final raw = await widget.controller.lyricsFor(widget.track);
     if (!mounted) return;
     setState(() {
-      lines = parsed;
-      lineKeys = List.generate(parsed.length, (_) => GlobalKey());
-      loading = false;
+      _applyLyrics(raw ?? '');
     });
     _onPosition(widget.controller.playback.player.position);
   }
@@ -60,10 +78,8 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
     if (!mounted) return;
     final next = _activeLineAt(value);
     final changed = next != activeLine;
-    setState(() {
-      position = value;
-      activeLine = next;
-    });
+    if (!changed) return;
+    setState(() => activeLine = next);
     if (changed && next >= 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final target = lineKeys[next].currentContext;
@@ -91,8 +107,47 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
   @override
   void dispose() {
     positionSubscription?.cancel();
+    dismissOffset.dispose();
     scroll.dispose();
     super.dispose();
+  }
+
+  void _dragDismiss(DragUpdateDetails details) {
+    if (completingDismiss) return;
+    dismissOffset.value = math.max(0, dismissOffset.value + details.delta.dy);
+  }
+
+  Future<void> _finishDismiss(DragEndDetails details) async {
+    if (completingDismiss) return;
+    final height = MediaQuery.sizeOf(context).height;
+    final shouldDismiss =
+        dismissOffset.value >= 88 ||
+        details.primaryVelocity != null && details.primaryVelocity! >= 650;
+    if (!shouldDismiss) {
+      await dismissOffset.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    completingDismiss = true;
+    HapticFeedback.selectionClick();
+    await dismissOffset.animateTo(
+      height,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInCubic,
+    );
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  void _cancelDismiss() {
+    if (completingDismiss) return;
+    dismissOffset.animateTo(
+      0,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -101,21 +156,48 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
     builder: (context, _) {
       final playback = widget.controller.playback;
       final track = playback.current ?? widget.track;
+      final dragRegionHeight = MediaQuery.paddingOf(context).top + 112;
       return Scaffold(
-        backgroundColor: const Color(0xFF1B1014),
-        body: Stack(
-          children: [
-            const Positioned.fill(child: _LyricsBackdrop()),
-            SafeArea(
-              child: Column(
-                children: [
-                  _CompactHeader(track: track),
-                  Expanded(child: _lyrics()),
-                  _PlaybackBar(controller: widget.controller),
-                ],
+        backgroundColor: Colors.transparent,
+        body: AnimatedBuilder(
+          animation: dismissOffset,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                Transform.translate(
+                  offset: Offset(0, dismissOffset.value),
+                  child: child,
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: dragRegionHeight,
+                  child: GestureDetector(
+                    key: const ValueKey('lyrics-top-dismiss-region'),
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragUpdate: _dragDismiss,
+                    onVerticalDragEnd: _finishDismiss,
+                    onVerticalDragCancel: _cancelDismiss,
+                  ),
+                ),
+              ],
+            );
+          },
+          child: Stack(
+            children: [
+              const Positioned.fill(child: _LyricsBackdrop()),
+              SafeArea(
+                child: Column(
+                  children: [
+                    _CompactHeader(track: track),
+                    Expanded(child: _lyrics()),
+                    _PlaybackBar(controller: widget.controller),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     },
@@ -148,11 +230,13 @@ class _SyncedLyricsPageState extends State<SyncedLyricsPage> {
         return Padding(
           key: lineKeys[index],
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _KaraokeLine(
-            line: lines[index],
-            active: index == activeLine,
-            distance: distance,
-            onTap: () => widget.controller.playback.seek(lines[index].start),
+          child: RepaintBoundary(
+            child: _KaraokeLine(
+              line: lines[index],
+              active: index == activeLine,
+              distance: distance,
+              onTap: () => widget.controller.playback.seek(lines[index].start),
+            ),
           ),
         );
       },
@@ -200,24 +284,6 @@ class _CompactHeader extends StatelessWidget {
   );
 }
 
-class _BottomBackButton extends StatelessWidget {
-  const _BottomBackButton();
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: 42,
-    child: IconButton(
-      padding: EdgeInsets.zero,
-      onPressed: () => Navigator.pop(context),
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.white.withValues(alpha: .12),
-        foregroundColor: Colors.white,
-      ),
-      icon: const Icon(CupertinoIcons.chevron_down, size: 21),
-    ),
-  );
-}
-
 class _SmallArtwork extends StatelessWidget {
   const _SmallArtwork({required this.track});
   final MusicTrack track;
@@ -231,14 +297,9 @@ class _SmallArtwork extends StatelessWidget {
     } else if (track.coverUrl?.isNotEmpty == true) {
       image = Image.network(track.coverUrl!, fit: BoxFit.cover);
     }
-    return Hero(
-      tag: 'lyrics-artwork-${track.id}',
-      createRectTween: (begin, end) =>
-          MaterialRectCenterArcTween(begin: begin, end: end),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: SizedBox.square(dimension: 58, child: image),
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox.square(dimension: 58, child: image),
     );
   }
 }
@@ -290,6 +351,7 @@ class _KaraokeLine extends StatelessWidget {
         duration: const Duration(milliseconds: 520),
         curve: Curves.easeOutCubic,
         child: ImageFiltered(
+          enabled: distance > 0 && distance <= 3,
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: AnimatedOpacity(
             opacity: opacity,
@@ -331,35 +393,29 @@ class _PlaybackBar extends StatelessWidget {
     final playback = controller.playback;
     return SizedBox(
       height: 112,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Positioned(left: 16, child: _BottomBackButton()),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: playback.previous,
-                color: Colors.white,
-                iconSize: 36,
-                icon: const Icon(CupertinoIcons.backward_fill),
-              ),
-              const SizedBox(width: 12),
-              AppleMusicPlayButton(
-                playing: playback.playing,
-                onPressed: playback.toggle,
-                color: Colors.white,
-                size: 68,
-                iconSize: 46,
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                onPressed: playback.next,
-                color: Colors.white,
-                iconSize: 36,
-                icon: const Icon(CupertinoIcons.forward_fill),
-              ),
-            ],
+          IconButton(
+            onPressed: playback.previous,
+            color: Colors.white,
+            iconSize: 36,
+            icon: const Icon(CupertinoIcons.backward_fill),
+          ),
+          const SizedBox(width: 12),
+          AppleMusicPlayButton(
+            playing: playback.playing,
+            onPressed: playback.toggle,
+            color: Colors.white,
+            size: 68,
+            iconSize: 46,
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            onPressed: playback.next,
+            color: Colors.white,
+            iconSize: 36,
+            icon: const Icon(CupertinoIcons.forward_fill),
           ),
         ],
       ),
@@ -379,10 +435,7 @@ class _LyricsBackdrop extends StatelessWidget {
         colors: [Color(0xFF5B2936), Color(0xFF26151B), Color(0xFF111114)],
       ),
     ),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
-      child: const SizedBox.expand(),
-    ),
+    child: const SizedBox.expand(),
   );
 }
 

@@ -1488,16 +1488,11 @@ class _PlayerSheetState extends State<PlayerSheet> {
             LayoutBuilder(
               builder: (_, constraints) {
                 final size = math.min(constraints.maxWidth, 360.0);
-                return Hero(
-                  tag: 'lyrics-artwork-${track.id}',
-                  createRectTween: (begin, end) =>
-                      MaterialRectCenterArcTween(begin: begin, end: end),
-                  child: Artwork(
-                    track: track,
-                    size: size,
-                    radius: 28,
-                    shadow: true,
-                  ),
+                return Artwork(
+                  track: track,
+                  size: size,
+                  radius: 28,
+                  shadow: true,
                 );
               },
             ),
@@ -2736,28 +2731,27 @@ Future<void> lyricsSheet(
   HapticFeedback.selectionClick();
   await Navigator.of(context).push(
     PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 560),
-      reverseTransitionDuration: const Duration(milliseconds: 420),
-      pageBuilder: (_, _, _) =>
-          SyncedLyricsPage(controller: controller, track: track),
+      opaque: false,
+      barrierColor: const Color(0x33000000),
+      transitionDuration: const Duration(milliseconds: 360),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (_, _, _) => SyncedLyricsPage(
+        controller: controller,
+        track: track,
+        initialLyrics: controller.immediateLyricsFor(track),
+      ),
       transitionsBuilder: (_, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(
           parent: animation,
           curve: Curves.easeOutCubic,
           reverseCurve: Curves.easeInCubic,
         );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween(
-              begin: const Offset(0, .025),
-              end: Offset.zero,
-            ).animate(curved),
-            child: ScaleTransition(
-              scale: Tween(begin: .985, end: 1.0).animate(curved),
-              child: child,
-            ),
-          ),
+        return SlideTransition(
+          position: Tween(
+            begin: const Offset(0, .045),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
         );
       },
     ),

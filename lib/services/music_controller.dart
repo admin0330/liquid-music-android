@@ -291,10 +291,14 @@ class MusicController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> lyricsFor(MusicTrack track) async {
+  String? immediateLyricsFor(MusicTrack track) {
     if (track.lyrics?.trim().isNotEmpty == true) return track.lyrics;
-    final builtin = builtinLyricsFor(title: track.title, artist: track.artist);
-    if (builtin != null) return builtin;
+    return builtinLyricsFor(title: track.title, artist: track.artist);
+  }
+
+  Future<String?> lyricsFor(MusicTrack track) async {
+    final immediate = immediateLyricsFor(track);
+    if (immediate != null) return immediate;
     if (track.source == MusicSourceKind.subsonic && _subsonic != null) {
       return _subsonic!.lyricsFor(track);
     }
