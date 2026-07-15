@@ -20,9 +20,9 @@ const ink = Color(0xFF1D1D1F);
 const mutedInk = Color(0xFF6E6E73);
 const musicRed = Color(0xFFFA2D48);
 const canvas = Color(0xFFF5F5F7);
-const glassFill = Color(0xE8FDFDFE);
-const glassStroke = Color(0x241D1D1F);
-const glassShadow = Color(0x1F000000);
+const glassFill = Color(0xB8FFFFFF);
+const glassStroke = Color(0xA6FFFFFF);
+const glassShadow = Color(0x24000000);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +82,8 @@ class _LiquidMusicAppState extends State<LiquidMusicApp> {
         displayColor: ink,
       ),
       dividerColor: const Color(0x16000000),
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
@@ -243,14 +245,18 @@ class TelegramDock extends StatelessWidget {
         height: 58,
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xF2FDFDFE),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xD9FFFFFF), Color(0xA6FFFFFF)],
+          ),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0x2E1D1D1F)),
+          border: Border.all(color: const Color(0xCCFFFFFF)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x29000000),
-              blurRadius: 22,
-              offset: Offset(0, 7),
+              color: Color(0x26000000),
+              blurRadius: 28,
+              offset: Offset(0, 10),
             ),
           ],
         ),
@@ -323,11 +329,23 @@ class _DockDestinationState extends State<_DockDestination> {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: pressed
-                ? const Color(0x14000000)
+                ? const Color(0x1A000000)
                 : widget.selected
-                ? const Color(0x14FA2D48)
+                ? const Color(0xA6FFFFFF)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(22),
+            border: widget.selected
+                ? Border.all(color: const Color(0xB8FFFFFF))
+                : null,
+            boxShadow: widget.selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x16000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -511,7 +529,74 @@ class GlassPanel extends StatelessWidget {
             BoxShadow(color: shadowColor, blurRadius: 26, offset: Offset(0, 9)),
           ],
         ),
+        foregroundDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.center,
+            colors: [Color(0x38FFFFFF), Color(0x00FFFFFF)],
+          ),
+        ),
         child: child,
+      ),
+    ),
+  );
+}
+
+class ContentPanel extends StatelessWidget {
+  const ContentPanel({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.radius = 22,
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      color: const Color(0xD9FFFFFF),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: const Color(0x0F000000)),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0A000000),
+          blurRadius: 16,
+          offset: Offset(0, 5),
+        ),
+      ],
+    ),
+    child: child,
+  );
+}
+
+class IosToolbarButton extends StatelessWidget {
+  const IosToolbarButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    radius: 24,
+    padding: EdgeInsets.zero,
+    blur: 24,
+    child: SizedBox.square(
+      dimension: 48,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, size: 23),
       ),
     ),
   );
@@ -585,24 +670,14 @@ class HomePage extends StatelessWidget {
             PageHeader(
               '主页',
               subtitle: greeting(),
-              trailing: GlassPanel(
-                radius: 24,
-                padding: EdgeInsets.zero,
-                child: SizedBox.square(
-                  dimension: 48,
-                  child: IconButton(
-                    tooltip: '导入音乐',
-                    onPressed: () => controller.importLocal().then((count) {
-                      if (context.mounted) {
-                        message(
-                          context,
-                          count == 0 ? '没有选择音乐' : '已导入 $count 首歌曲',
-                        );
-                      }
-                    }),
-                    icon: const Icon(CupertinoIcons.add, size: 24),
-                  ),
-                ),
+              trailing: IosToolbarButton(
+                tooltip: '导入音乐',
+                onPressed: () => controller.importLocal().then((count) {
+                  if (context.mounted) {
+                    message(context, count == 0 ? '没有选择音乐' : '已导入 $count 首歌曲');
+                  }
+                }),
+                icon: CupertinoIcons.add,
               ),
             ),
             if (controller.loading && albums.isEmpty)
@@ -636,7 +711,7 @@ class HomePage extends StatelessWidget {
               const SectionTitle('为你推荐'),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GlassPanel(
+                child: ContentPanel(
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: Column(
                     children: [
@@ -682,8 +757,8 @@ class EmptyLibrary extends StatelessWidget {
   final MusicController controller;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-    child: GlassPanel(
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+    child: ContentPanel(
       child: Column(
         children: [
           Container(
@@ -772,15 +847,16 @@ class _LibraryPageState extends State<LibraryPage> {
         children: [
           PageHeader(
             '资料库',
-            trailing: IconButton(
+            trailing: IosToolbarButton(
+              tooltip: '新建歌单',
               onPressed: () => createPlaylistDialog(context, controller),
-              icon: const Icon(CupertinoIcons.add),
+              icon: CupertinoIcons.add,
             ),
           ),
           SizedBox(
             height: 43,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               itemCount: labels.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -858,36 +934,32 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           const PageHeader('搜索'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: TextField(
-              controller: search,
-              onChanged: widget.controller.search,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: glassFill,
-                prefixIcon: const Icon(CupertinoIcons.search),
-                suffixIcon: search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        onPressed: () {
-                          search.clear();
-                          widget.controller.search('');
-                          setState(() {});
-                        },
-                        icon: const Icon(CupertinoIcons.clear_circled_solid),
-                      ),
-                hintText: '歌曲、艺人、专辑',
-                border: OutlineInputBorder(
-                  borderSide: const BorderSide(color: glassStroke),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: glassStroke),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: musicRed, width: 1.4),
-                  borderRadius: BorderRadius.circular(15),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GlassPanel(
+              radius: 22,
+              padding: EdgeInsets.zero,
+              blur: 24,
+              child: TextField(
+                controller: search,
+                onChanged: widget.controller.search,
+                decoration: InputDecoration(
+                  filled: false,
+                  prefixIcon: const Icon(CupertinoIcons.search),
+                  suffixIcon: search.text.isEmpty
+                      ? null
+                      : IconButton(
+                          onPressed: () {
+                            search.clear();
+                            widget.controller.search('');
+                            setState(() {});
+                          },
+                          icon: const Icon(CupertinoIcons.clear_circled_solid),
+                        ),
+                  hintText: '歌曲、艺人、专辑',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
             ),
@@ -1317,9 +1389,9 @@ class SettingsGroup extends StatelessWidget {
             ),
           ),
         ),
-        GlassPanel(
+        ContentPanel(
           padding: EdgeInsets.zero,
-          radius: 20,
+          radius: 22,
           child: Column(children: children),
         ),
       ],
@@ -1389,9 +1461,9 @@ class MiniPlayer extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: GlassPanel(
-          radius: 20,
+          radius: 24,
           padding: const EdgeInsets.all(8),
-          color: dark ? const Color(0x2BFFFFFF) : glassFill,
+          color: dark ? const Color(0x2BFFFFFF) : const Color(0xC2FFFFFF),
           borderColor: dark ? const Color(0x66FFFFFF) : glassStroke,
           shadowColor: dark ? const Color(0x26000000) : glassShadow,
           child: Row(
@@ -1497,9 +1569,10 @@ class _PlayerSheetState extends State<PlayerSheet> {
                       padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
                       child: Row(
                         children: [
-                          IconButton.filledTonal(
+                          IosToolbarButton(
+                            tooltip: '收起播放器',
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(CupertinoIcons.chevron_down),
+                            icon: CupertinoIcons.chevron_down,
                           ),
                           const Spacer(),
                           const Text(
@@ -2717,7 +2790,7 @@ class PlaylistList extends StatelessWidget {
         )
       : Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GlassPanel(
+          child: ContentPanel(
             padding: const EdgeInsets.symmetric(vertical: 4),
             radius: 22,
             child: Column(
