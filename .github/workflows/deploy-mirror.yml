@@ -1,0 +1,66 @@
+name: Deploy APK mirror to Aliyun
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to deploy
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aliyun-update-mirror
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download signed release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          mkdir artifacts
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir artifacts \
+            --pattern "liquid-music-${RELEASE_TAG}.apk" \
+            --pattern "liquid-music-${RELEASE_TAG}.apk.sha256" \
+            --pattern latest.json
+
+      - name: Configure verified Aliyun SSH
+        env:
+          ALIYUN_SSH_PRIVATE_KEY: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+          ALIYUN_SSH_HOST_KEY: ${{ secrets.ALIYUN_SSH_HOST_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$ALIYUN_SSH_PRIVATE_KEY" > ~/.ssh/aliyun_deploy
+          printf '%s\n' "$ALIYUN_SSH_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/aliyun_deploy ~/.ssh/known_hosts
+
+      - name: Atomically publish update mirror
+        env:
+          ALIYUN_SSH_HOST: ${{ secrets.ALIYUN_SSH_HOST }}
+          ALIYUN_SSH_USER: ${{ secrets.ALIYUN_SSH_USER }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          APK="artifacts/liquid-music-${RELEASE_TAG}.apk"
+          SSH=(ssh -i ~/.ssh/aliyun_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          SCP=(scp -i ~/.ssh/aliyun_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          REMOTE="$ALIYUN_SSH_USER@$ALIYUN_SSH_HOST"
+          "${SCP[@]}" "$APK" "$APK.sha256" \
+            "$REMOTE:/var/www/liquid-music-updates/"
+          "${SCP[@]}" artifacts/latest.json \
+            "$REMOTE:/var/www/liquid-music-updates/latest.json.next"
+          "${SSH[@]}" "$REMOTE" \
+            "chmod 644 /var/www/liquid-music-updates/liquid-music-${RELEASE_TAG}.apk /var/www/liquid-music-updates/liquid-music-${RELEASE_TAG}.apk.sha256 /var/www/liquid-music-updates/latest.json.next && mv -f /var/www/liquid-music-updates/latest.json.next /var/www/liquid-music-updates/latest.json"
