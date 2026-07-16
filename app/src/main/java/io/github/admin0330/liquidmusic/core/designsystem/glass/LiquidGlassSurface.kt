@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import io.github.admin0330.liquidmusic.core.designsystem.theme.LocalLiquidPalette
@@ -110,7 +111,7 @@ fun LiquidGlassSurface(
 
 /**
  * A borderless glass region that gradually blends content into a fixed control band.
- * The gradient provides a soft fallback while Haze samples the shared host backdrop.
+ * The gradient provides a soft fallback while Haze progressively samples the supplied source.
  */
 @Composable
 fun LiquidGlassVerticalFade(
@@ -118,20 +119,23 @@ fun LiquidGlassVerticalFade(
     blurRadius: Dp = 32.dp,
     opacity: Float = 0.82f,
     tintColor: Color = LocalLiquidPalette.current.glassTint,
+    hazeState: HazeState? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val hazeState = LocalHazeState.current
+    val resolvedHazeState = hazeState ?: LocalHazeState.current
     val safeOpacity = opacity.coerceIn(0f, 1f)
-    val haze = if (hazeState != null) {
+    val haze = if (resolvedHazeState != null) {
         Modifier.hazeEffect(
-            state = hazeState,
+            state = resolvedHazeState,
             style = HazeStyle(
                 backgroundColor = tintColor.copy(alpha = 0.01f),
                 tints = emptyList(),
                 blurRadius = blurRadius,
                 noiseFactor = 0.06f,
             ),
-        )
+        ) {
+            progressive = HazeProgressive.verticalGradient()
+        }
     } else {
         Modifier
     }
@@ -142,8 +146,10 @@ fun LiquidGlassVerticalFade(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
                         0f to Color.Transparent,
-                        0.18f to tintColor.copy(alpha = safeOpacity * 0.08f),
-                        0.42f to tintColor.copy(alpha = safeOpacity * 0.44f),
+                        0.16f to tintColor.copy(alpha = safeOpacity * 0.02f),
+                        0.34f to tintColor.copy(alpha = safeOpacity * 0.10f),
+                        0.52f to tintColor.copy(alpha = safeOpacity * 0.28f),
+                        0.72f to tintColor.copy(alpha = safeOpacity * 0.56f),
                         1f to tintColor.copy(alpha = safeOpacity),
                     ),
                 ),

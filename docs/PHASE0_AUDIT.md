@@ -1,6 +1,6 @@
 # Liquid Music Android：Phase 0 项目审计与迁移基线
 
-> 历史说明：本文记录 v3.0.0 原生迁移前的目标与差距。自 v3.0.1 起，产品决策已移除 Radio/广播顶层页，并将 Home 改为受限 WebView 内嵌 `https://ym3861.cn/blog`；当前实现契约以 [`ARCHITECTURE.md`](./ARCHITECTURE.md) 为准。
+> 历史说明：本文记录 v3.0.0 原生迁移前的目标与差距。v3.0.1 移除了 Radio/广播顶层页并曾以内嵌 WebView 展示博客；自 v3.0.3 起，Home 已改为不加载网页的原生 Compose 个人主页。当前实现契约以 [`ARCHITECTURE.md`](./ARCHITECTURE.md) 为准。
 
 > 审计日期：2026-07-15
 > 审计分支：`native-compose-rewrite`

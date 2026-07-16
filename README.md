@@ -6,13 +6,13 @@
 
 Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple Music iOS 26 的空间、层次、动态专辑色和 Liquid Glass 视觉语言带到 Android，但只管理设备上的音乐、播放列表和本地歌词。
 
-它不是 Apple Music 客户端，也不会连接 Apple 账号、Apple Music API、在线曲库、DRM、iCloud Music Library、Subsonic 或 Navidrome。网络功能仅用于主页内嵌的个人博客和用户主动触发的应用更新；音乐扫描、搜索与播放仍完全在设备本地完成。
+它不是 Apple Music 客户端，也不会连接 Apple 账号、Apple Music API、在线曲库、DRM、iCloud Music Library、Subsonic 或 Navidrome。应用内网络功能仅用于用户主动触发的应用更新；原生个人主页中的博客和 GitHub 入口交给系统浏览器打开，音乐扫描、搜索与播放仍完全在设备本地完成。
 
 > 本项目与 Apple Inc.、Apple Music 或 Bunpod 没有隶属、合作或认可关系。Apple Music 和 iOS 是 Apple Inc. 的商标。界面为独立实现；仓库不包含 Apple/Bunpod 源码、素材、商业音乐、封面或歌词。
 
 ## 当前版本
 
-- 版本：`3.0.2`（`versionCode 21`）
+- 版本：`3.0.3`（`versionCode 22`）
 - 最低系统：Android 8.0 / API 26
 - 目标系统：Android API 37
 - 正式包名：`io.github.admin0330.real_liquid_glass_demo`
@@ -54,11 +54,11 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 - 页面、Dock 选中态、按钮按压、封面呼吸、颜色和歌词切换均使用统一 motion token。
 - 浅色、深色和跟随系统三种外观。
 
-### 博客首页与专辑
+### 原生个人主页与专辑
 
-- 主页在受限 Android WebView 中内嵌个人博客 [Ym1r World](https://ym3861.cn/blog)。
-- 玻璃工具栏提供网页后退、刷新和应用设置入口；页面状态可在导航切换后恢复。
-- 仅 `https://ym3861.cn` 与 `https://www.ym3861.cn` 在应用内加载，普通外站链接交给系统浏览器，文件、脚本和 Intent URL 会被拒绝。
+- 主页使用纯 Compose 构建 Ym1r 原生个人主页，包含简介、状态、个人空间、开源项目与最近动态。
+- 主页不创建 WebView，不运行网页 JavaScript，也不保存网页 Cookie 或站点状态。
+- 博客、GitHub 和项目链接仅通过已知 HTTPS 地址交给系统浏览器打开。
 - 专辑详情包含封面、艺人、年份、无损标记、曲序、播放和随机播放。
 
 ### 播放列表与收藏
@@ -76,7 +76,7 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 - 纯歌词页面按行同步、平滑居中滚动、透明度/字重/缩放/模糊过渡，并可点按跳转。
 - 手动滑动歌词时暂停逐行跟随；停止滑动 3 秒后，仅在当前播放行偏离阅读位置时平滑回正。
 - 顶部下拉返回播放器；系统返回键会按“队列 → 歌词 → 播放器”层级退出。
-- 歌词与进度/播放控制区使用独立固定布局和渐变玻璃过渡，互不覆盖。
+- 歌词与进度/播放控制区使用固定安全空间，并通过原生 progressive Haze 从清晰逐步过渡到完整模糊。
 
 ### USB DAC
 
@@ -217,7 +217,7 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ## 从 2.4.9 升级
 
-正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.2 可以覆盖升级 2.4.9、3.0.0 或 3.0.1。
+正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.3 可以覆盖升级 2.4.9、3.0.0、3.0.1 或 3.0.2。
 
 首次启动会幂等迁移：
 
@@ -244,14 +244,14 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ```json
 {
-  "versionCode": 21,
-  "versionName": "3.0.2",
-  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.2.apk",
+  "versionCode": 22,
+  "versionName": "3.0.3",
+  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.3.apk",
   "sha256": "<64 lowercase hexadecimal characters>",
   "size": 12345678,
   "changelog": "更新说明",
-  "version": "3.0.2",
-  "apk_url": "liquid-music-v3.0.2.apk",
+  "version": "3.0.3",
+  "apk_url": "liquid-music-v3.0.3.apk",
   "notes": "更新说明"
 }
 ```
@@ -273,7 +273,7 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | 后台持续播放 |
 | `WAKE_LOCK` | 播放期间避免解码被休眠中断 |
 | `MODIFY_AUDIO_SETTINGS` | 音频焦点和 Android 14+ USB mixer 属性 |
-| `INTERNET` | 加载主页个人博客，以及用户手动检查和下载应用更新 |
+| `INTERNET` | 用户手动检查和下载应用更新；主页外部链接由系统浏览器处理 |
 | `REQUEST_INSTALL_PACKAGES` | 打开 Android 系统安装器安装已验证 APK |
 
 音乐、播放历史、播放列表和歌词都保存在设备本地。应用不包含统计 SDK、广告 SDK、账号系统或遥测。更新请求只发送普通 HTTPS 请求；不会上传音乐文件或资料库内容。

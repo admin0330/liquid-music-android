@@ -22,8 +22,8 @@ android {
         applicationId = "io.github.admin0330.real_liquid_glass_demo"
         minSdk = 26
         targetSdk = 37
-        versionCode = 21
-        versionName = "3.0.2"
+        versionCode = 22
+        versionName = "3.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

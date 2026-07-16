@@ -90,6 +90,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import coil3.compose.AsyncImage
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import io.github.admin0330.liquidmusic.core.designsystem.components.Artwork
 import io.github.admin0330.liquidmusic.core.designsystem.components.liquidClickable
 import io.github.admin0330.liquidmusic.core.designsystem.glass.LiquidGlassHost
@@ -389,6 +391,7 @@ private fun LyricsPlayerPage(
     val track = requireNotNull(state.currentTrack)
     val active = lyrics?.activeLineIndex(state.positionMs) ?: -1
     val listState = rememberLazyListState()
+    val lyricsHazeState = remember { HazeState() }
     val isUserDragging by listState.interactionSource.collectIsDraggedAsState()
     val latestActive by rememberUpdatedState(active)
     var followsPlayback by remember(lyrics) { mutableStateOf(true) }
@@ -435,7 +438,7 @@ private fun LyricsPlayerPage(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().hazeSource(lyricsHazeState),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(
                             start = LiquidSpacing.lg,
                             top = maxHeight * LYRICS_READING_POSITION,
@@ -465,30 +468,31 @@ private fun LyricsPlayerPage(
                         }
                     }
                 }
-            }
-            LiquidGlassVerticalFade(
-                modifier = Modifier.fillMaxWidth().height(LYRICS_CONTROL_BAND_HEIGHT),
-                blurRadius = 32.dp,
-                opacity = 0.84f,
-                tintColor = Color.Black,
-            ) {
-                Column(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = LiquidSpacing.screen)
-                        .padding(top = LiquidSpacing.xs, bottom = LiquidSpacing.sm),
+                LiquidGlassVerticalFade(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(LYRICS_CONTROL_BAND_HEIGHT),
+                    blurRadius = 32.dp,
+                    opacity = 0.92f,
+                    tintColor = Color.Black,
+                    hazeState = lyricsHazeState,
                 ) {
-                    PlayerProgress(state, actions.seekTo)
-                    Row(
-                        Modifier.fillMaxWidth().height(72.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = LiquidSpacing.screen)
+                            .padding(top = LiquidSpacing.xl, bottom = LiquidSpacing.sm),
                     ) {
-                        PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
-                        PlayPauseControl(state, 62.dp, actions.togglePlayPause)
-                        PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
-                        PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
+                        PlayerProgress(state, actions.seekTo)
+                        Row(
+                            Modifier.fillMaxWidth().height(72.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
+                            PlayPauseControl(state, 62.dp, actions.togglePlayPause)
+                            PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
+                            PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
+                        }
                     }
                 }
             }
@@ -499,7 +503,7 @@ private fun LyricsPlayerPage(
 
 private const val LYRICS_RETURN_DELAY_MS = 3_000L
 private const val LYRICS_READING_POSITION = 0.34f
-private val LYRICS_CONTROL_BAND_HEIGHT = 184.dp
+private val LYRICS_CONTROL_BAND_HEIGHT = 224.dp
 
 private suspend fun LazyListState.animateToLyric(index: Int) {
     val viewportHeight = snapshotFlow { layoutInfo.viewportSize.height }.first { height -> height > 0 }
