@@ -30,7 +30,7 @@ Require manual approval for the production environment. Protect `v*` tags and `m
 
 ## Version rules
 
-- `versionCode` must strictly increase. Version 3.0.0 used code 19, 3.0.1 used code 20, 3.0.2 used code 21, and 3.0.3 uses code 22.
+- `versionCode` must strictly increase. Version 3.0.0 used code 19, 3.0.1 used code 20, 3.0.2 used code 21, 3.0.3 used code 22, and 3.0.4 uses code 23.
 - The release tag without its leading `v` must exactly equal `versionName` embedded in the APK.
 - The formal applicationId must stay `io.github.admin0330.real_liquid_glass_demo`.
 - The signing certificate SHA-256 must stay:
@@ -87,14 +87,14 @@ Create `latest.json` with `jq`, never by interpolating untrusted strings into a 
 
 ```json
 {
-  "versionCode": 22,
-  "versionName": "3.0.3",
-  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.3.apk",
+  "versionCode": 23,
+  "versionName": "3.0.4",
+  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.4.apk",
   "sha256": "<sha256>",
   "size": 12345678,
   "changelog": "更新说明",
-  "version": "3.0.3",
-  "apk_url": "liquid-music-v3.0.3.apk",
+  "version": "3.0.4",
+  "apk_url": "liquid-music-v3.0.4.apk",
   "notes": "更新说明"
 }
 ```

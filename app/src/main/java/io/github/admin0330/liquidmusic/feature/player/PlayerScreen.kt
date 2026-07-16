@@ -445,7 +445,7 @@ private fun LyricsPlayerPage(
                             end = LiquidSpacing.lg,
                             bottom = maxHeight * (1f - LYRICS_READING_POSITION),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(LiquidSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
                         items(lyrics.lines.size, key = { index -> "${lyrics.lines[index].timeMs}:$index" }) { index ->
                             val line = lyrics.lines[index]
@@ -469,31 +469,31 @@ private fun LyricsPlayerPage(
                     }
                 }
                 LiquidGlassVerticalFade(
-                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(LYRICS_CONTROL_BAND_HEIGHT),
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(LYRICS_EDGE_FADE_HEIGHT),
                     blurRadius = 32.dp,
                     opacity = 0.92f,
                     tintColor = Color.Black,
                     hazeState = lyricsHazeState,
+                ) {}
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .height(LYRICS_CONTROL_SECTION_HEIGHT)
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .padding(horizontal = LiquidSpacing.screen)
+                    .padding(top = LiquidSpacing.lg, bottom = LiquidSpacing.sm),
+            ) {
+                PlayerProgress(state, actions.seekTo)
+                Row(
+                    Modifier.fillMaxWidth().height(72.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .padding(horizontal = LiquidSpacing.screen)
-                            .padding(top = LiquidSpacing.xl, bottom = LiquidSpacing.sm),
-                    ) {
-                        PlayerProgress(state, actions.seekTo)
-                        Row(
-                            Modifier.fillMaxWidth().height(72.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
-                            PlayPauseControl(state, 62.dp, actions.togglePlayPause)
-                            PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
-                            PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
-                        }
-                    }
+                    PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
+                    PlayPauseControl(state, 62.dp, actions.togglePlayPause)
+                    PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
+                    PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
                 }
             }
         }
@@ -503,7 +503,8 @@ private fun LyricsPlayerPage(
 
 private const val LYRICS_RETURN_DELAY_MS = 3_000L
 private const val LYRICS_READING_POSITION = 0.34f
-private val LYRICS_CONTROL_BAND_HEIGHT = 224.dp
+private val LYRICS_EDGE_FADE_HEIGHT = 112.dp
+private val LYRICS_CONTROL_SECTION_HEIGHT = 208.dp
 
 private suspend fun LazyListState.animateToLyric(index: Int) {
     val viewportHeight = snapshotFlow { layoutInfo.viewportSize.height }.first { height -> height > 0 }

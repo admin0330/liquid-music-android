@@ -12,7 +12,7 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 
 ## 当前版本
 
-- 版本：`3.0.3`（`versionCode 22`）
+- 版本：`3.0.4`（`versionCode 23`）
 - 最低系统：Android 8.0 / API 26
 - 目标系统：Android API 37
 - 正式包名：`io.github.admin0330.real_liquid_glass_demo`
@@ -76,7 +76,7 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 - 纯歌词页面按行同步、平滑居中滚动、透明度/字重/缩放/模糊过渡，并可点按跳转。
 - 手动滑动歌词时暂停逐行跟随；停止滑动 3 秒后，仅在当前播放行偏离阅读位置时平滑回正。
 - 顶部下拉返回播放器；系统返回键会按“队列 → 歌词 → 播放器”层级退出。
-- 歌词与进度/播放控制区使用固定安全空间，并通过原生 progressive Haze 从清晰逐步过渡到完整模糊。
+- 歌词保持原行距；列表底部先通过原生 progressive Haze 从清晰逐步模糊并消失，再经过独立安全间距进入进度与播放控制区。
 
 ### USB DAC
 
@@ -217,7 +217,7 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ## 从 2.4.9 升级
 
-正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.3 可以覆盖升级 2.4.9、3.0.0、3.0.1 或 3.0.2。
+正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.4 可以覆盖升级 2.4.9、3.0.0、3.0.1、3.0.2 或 3.0.3。
 
 首次启动会幂等迁移：
 
@@ -244,14 +244,14 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ```json
 {
-  "versionCode": 22,
-  "versionName": "3.0.3",
-  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.3.apk",
+  "versionCode": 23,
+  "versionName": "3.0.4",
+  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.4.apk",
   "sha256": "<64 lowercase hexadecimal characters>",
   "size": 12345678,
   "changelog": "更新说明",
-  "version": "3.0.3",
-  "apk_url": "liquid-music-v3.0.3.apk",
+  "version": "3.0.4",
+  "apk_url": "liquid-music-v3.0.4.apk",
   "notes": "更新说明"
 }
 ```
