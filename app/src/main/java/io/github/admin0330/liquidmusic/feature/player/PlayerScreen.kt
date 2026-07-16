@@ -25,6 +25,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -40,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -68,7 +70,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -89,6 +93,7 @@ import coil3.compose.AsyncImage
 import io.github.admin0330.liquidmusic.core.designsystem.components.Artwork
 import io.github.admin0330.liquidmusic.core.designsystem.components.liquidClickable
 import io.github.admin0330.liquidmusic.core.designsystem.glass.LiquidGlassHost
+import io.github.admin0330.liquidmusic.core.designsystem.glass.LiquidGlassVerticalFade
 import io.github.admin0330.liquidmusic.core.designsystem.tokens.LiquidMotion
 import io.github.admin0330.liquidmusic.core.designsystem.tokens.LiquidSpacing
 import io.github.admin0330.liquidmusic.core.lyrics.ParsedLyrics
@@ -97,6 +102,8 @@ import io.github.admin0330.liquidmusic.player.PlaybackState
 import io.github.admin0330.liquidmusic.player.RepeatMode
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun PlayerScreen(
@@ -382,10 +389,26 @@ private fun LyricsPlayerPage(
     val track = requireNotNull(state.currentTrack)
     val active = lyrics?.activeLineIndex(state.positionMs) ?: -1
     val listState = rememberLazyListState()
-    LaunchedEffect(active) {
-        if (active >= 0) {
-            val centerOffset = -(listState.layoutInfo.viewportSize.height * 0.34f).roundToInt()
-            listState.animateScrollToItem(active, scrollOffset = centerOffset)
+    val isUserDragging by listState.interactionSource.collectIsDraggedAsState()
+    val latestActive by rememberUpdatedState(active)
+    var followsPlayback by remember(lyrics) { mutableStateOf(true) }
+
+    LaunchedEffect(isUserDragging, lyrics) {
+        if (isUserDragging) {
+            followsPlayback = false
+        } else if (!followsPlayback) {
+            snapshotFlow { listState.isScrollInProgress }.first { scrolling -> !scrolling }
+            delay(LYRICS_RETURN_DELAY_MS)
+            val currentActive = latestActive
+            if (currentActive >= 0 && !listState.isLyricAtReadingPosition(currentActive)) {
+                listState.animateToLyric(currentActive)
+            }
+            followsPlayback = true
+        }
+    }
+    LaunchedEffect(active, followsPlayback) {
+        if (followsPlayback && active >= 0 && !listState.isLyricAtReadingPosition(active)) {
+            listState.animateToLyric(active)
         }
     }
     Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -402,58 +425,96 @@ private fun LyricsPlayerPage(
                 Spacer(Modifier.width(LiquidSpacing.sm))
                 Artwork(track.artworkUri, null, Modifier.size(48.dp), 12.dp)
             }
-            if (lyrics == null || lyrics.lines.isEmpty()) {
-                Column(Modifier.fillMaxSize().padding(horizontal = LiquidSpacing.lg), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Text("没有找到同步歌词", color = Color.White, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-                    Text("可选择与当前歌曲匹配的本地 .lrc 文件", color = Color.White.copy(alpha = 0.58f), textAlign = TextAlign.Center, modifier = Modifier.padding(top = LiquidSpacing.sm))
-                    Text("选择歌词文件", color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = LiquidSpacing.lg).liquidClickable(onClick = onChooseLyrics))
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(start = LiquidSpacing.lg, top = 88.dp, end = LiquidSpacing.lg, bottom = 220.dp),
-                    verticalArrangement = Arrangement.spacedBy(22.dp),
-                ) {
-                    items(lyrics.lines.size, key = { index -> "${lyrics.lines[index].timeMs}:$index" }) { index ->
-                        val line = lyrics.lines[index]
-                        val distance = abs(index - active)
-                        val alpha by animateFloatAsState(if (index == active) 1f else if (distance <= 2) 0.54f else 0.28f, tween(LiquidMotion.quick), label = "lyric-alpha")
-                        val scale by animateFloatAsState(if (index == active) 1.025f else 1f, tween(LiquidMotion.standard), label = "lyric-scale")
-                        val weight by animateFloatAsState(if (index == active) 700f else 600f, tween(LiquidMotion.standard), label = "lyric-weight")
-                        val blurRadius by animateDpAsState(if (index == active || distance <= 1) 0.dp else 1.1.dp, tween(LiquidMotion.standard), label = "lyric-blur")
-                        Text(
-                            text = line.text.ifBlank { "♪" },
-                            color = Color.White,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight(weight.roundToInt())),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .graphicsLayer { scaleX = scale; scaleY = scale }
-                                .alpha(alpha)
-                                .blur(blurRadius)
-                                .liquidClickable { actions.seekTo(line.timeMs) },
-                        )
+            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                if (lyrics == null || lyrics.lines.isEmpty()) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = LiquidSpacing.lg), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text("没有找到同步歌词", color = Color.White, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+                        Text("可选择与当前歌曲匹配的本地 .lrc 文件", color = Color.White.copy(alpha = 0.58f), textAlign = TextAlign.Center, modifier = Modifier.padding(top = LiquidSpacing.sm))
+                        Text("选择歌词文件", color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = LiquidSpacing.lg).liquidClickable(onClick = onChooseLyrics))
+                    }
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = LiquidSpacing.lg,
+                            top = maxHeight * LYRICS_READING_POSITION,
+                            end = LiquidSpacing.lg,
+                            bottom = maxHeight * (1f - LYRICS_READING_POSITION),
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(LiquidSpacing.lg),
+                    ) {
+                        items(lyrics.lines.size, key = { index -> "${lyrics.lines[index].timeMs}:$index" }) { index ->
+                            val line = lyrics.lines[index]
+                            val distance = abs(index - active)
+                            val alpha by animateFloatAsState(if (index == active) 1f else if (distance <= 2) 0.54f else 0.28f, tween(LiquidMotion.quick), label = "lyric-alpha")
+                            val scale by animateFloatAsState(if (index == active) 1.025f else 1f, tween(LiquidMotion.standard), label = "lyric-scale")
+                            val weight by animateFloatAsState(if (index == active) 700f else 600f, tween(LiquidMotion.standard), label = "lyric-weight")
+                            val blurRadius by animateDpAsState(if (index == active || distance <= 1) 0.dp else 1.1.dp, tween(LiquidMotion.standard), label = "lyric-blur")
+                            Text(
+                                text = line.text.ifBlank { "♪" },
+                                color = Color.White,
+                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight(weight.roundToInt())),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                                    .alpha(alpha)
+                                    .blur(blurRadius)
+                                    .liquidClickable { actions.seekTo(line.timeMs) },
+                            )
+                        }
                     }
                 }
             }
-        }
-        Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(184.dp).background(
-                Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f), Color.Black.copy(alpha = 0.84f))),
-            ),
-        ) {
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = LiquidSpacing.screen, vertical = LiquidSpacing.sm)) {
-                PlayerProgress(state, actions.seekTo)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
-                    PlayPauseControl(state, 62.dp, actions.togglePlayPause)
-                    PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
-                    PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
+            LiquidGlassVerticalFade(
+                modifier = Modifier.fillMaxWidth().height(LYRICS_CONTROL_BAND_HEIGHT),
+                blurRadius = 32.dp,
+                opacity = 0.84f,
+                tintColor = Color.Black,
+            ) {
+                Column(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = LiquidSpacing.screen)
+                        .padding(top = LiquidSpacing.xs, bottom = LiquidSpacing.sm),
+                ) {
+                    PlayerProgress(state, actions.seekTo)
+                    Row(
+                        Modifier.fillMaxWidth().height(72.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PlayerIcon(Icons.Rounded.SkipPrevious, "上一首", 30.dp, actions.previous)
+                        PlayPauseControl(state, 62.dp, actions.togglePlayPause)
+                        PlayerIcon(Icons.Rounded.SkipNext, "下一首", 30.dp, actions.next)
+                        PlayerIcon(Icons.Rounded.GraphicEq, "关闭歌词", 24.dp, onCloseLyrics)
+                    }
                 }
             }
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = 8.dp).size(width = 36.dp, height = 5.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = 0.32f)))
     }
+}
+
+private const val LYRICS_RETURN_DELAY_MS = 3_000L
+private const val LYRICS_READING_POSITION = 0.34f
+private val LYRICS_CONTROL_BAND_HEIGHT = 184.dp
+
+private suspend fun LazyListState.animateToLyric(index: Int) {
+    val viewportHeight = snapshotFlow { layoutInfo.viewportSize.height }.first { height -> height > 0 }
+    val readingOffset = -(viewportHeight * LYRICS_READING_POSITION).roundToInt()
+    animateScrollToItem(index, scrollOffset = readingOffset)
+}
+
+private fun LazyListState.isLyricAtReadingPosition(index: Int): Boolean {
+    val info = layoutInfo
+    val viewportHeight = info.viewportSize.height
+    if (viewportHeight <= 0) return false
+    val item = info.visibleItemsInfo.firstOrNull { visible -> visible.index == index } ?: return false
+    val targetOffset = viewportHeight * LYRICS_READING_POSITION
+    val tolerance = maxOf(item.size * 0.55f, viewportHeight * 0.045f)
+    return abs(item.offset - targetOffset) <= tolerance
 }
 
 @Composable

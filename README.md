@@ -12,7 +12,7 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 
 ## 当前版本
 
-- 版本：`3.0.1`（`versionCode 20`）
+- 版本：`3.0.2`（`versionCode 21`）
 - 最低系统：Android 8.0 / API 26
 - 目标系统：Android API 37
 - 正式包名：`io.github.admin0330.real_liquid_glass_demo`
@@ -74,8 +74,9 @@ Liquid Music Android 是一个原生 Kotlin 本地音乐播放器。它将 Apple
 - 自动发现与音频同名的旁路歌词；Android 8–9 使用旧 MediaStore 路径，Android 10+ 使用 scoped storage 查询。
 - 也可以通过系统文件选择器手动绑定本地歌词，支持 UTF-8 与 GB18030。
 - 纯歌词页面按行同步、平滑居中滚动、透明度/字重/缩放/模糊过渡，并可点按跳转。
+- 手动滑动歌词时暂停逐行跟随；停止滑动 3 秒后，仅在当前播放行偏离阅读位置时平滑回正。
 - 顶部下拉返回播放器；系统返回键会按“队列 → 歌词 → 播放器”层级退出。
-- 歌词下方预留固定控制区，不会遮挡播放按钮。
+- 歌词与进度/播放控制区使用独立固定布局和渐变玻璃过渡，互不覆盖。
 
 ### USB DAC
 
@@ -216,7 +217,7 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ## 从 2.4.9 升级
 
-正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.1 可以覆盖升级 2.4.9 或 3.0.0。
+正式包继续使用原 applicationId，因此使用同一证书签名的 3.0.2 可以覆盖升级 2.4.9、3.0.0 或 3.0.1。
 
 首次启动会幂等迁移：
 
@@ -243,14 +244,14 @@ SHA-256: 621185c90ce4a8d95d531bc4ac936b0f54c029dddf910c60e0074342047fb523
 
 ```json
 {
-  "versionCode": 20,
-  "versionName": "3.0.1",
-  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.1.apk",
+  "versionCode": 21,
+  "versionName": "3.0.2",
+  "apkUrl": "https://ym3861.cn/liquid-music-updates/liquid-music-v3.0.2.apk",
   "sha256": "<64 lowercase hexadecimal characters>",
   "size": 12345678,
   "changelog": "更新说明",
-  "version": "3.0.1",
-  "apk_url": "liquid-music-v3.0.1.apk",
+  "version": "3.0.2",
+  "apk_url": "liquid-music-v3.0.2.apk",
   "notes": "更新说明"
 }
 ```

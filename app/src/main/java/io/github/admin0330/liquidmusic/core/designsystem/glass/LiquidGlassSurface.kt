@@ -107,3 +107,47 @@ fun LiquidGlassSurface(
         content = content,
     )
 }
+
+/**
+ * A borderless glass region that gradually blends content into a fixed control band.
+ * The gradient provides a soft fallback while Haze samples the shared host backdrop.
+ */
+@Composable
+fun LiquidGlassVerticalFade(
+    modifier: Modifier = Modifier,
+    blurRadius: Dp = 32.dp,
+    opacity: Float = 0.82f,
+    tintColor: Color = LocalLiquidPalette.current.glassTint,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val hazeState = LocalHazeState.current
+    val safeOpacity = opacity.coerceIn(0f, 1f)
+    val haze = if (hazeState != null) {
+        Modifier.hazeEffect(
+            state = hazeState,
+            style = HazeStyle(
+                backgroundColor = tintColor.copy(alpha = 0.01f),
+                tints = emptyList(),
+                blurRadius = blurRadius,
+                noiseFactor = 0.06f,
+            ),
+        )
+    } else {
+        Modifier
+    }
+    Box(
+        modifier = modifier
+            .then(haze)
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Transparent,
+                        0.18f to tintColor.copy(alpha = safeOpacity * 0.08f),
+                        0.42f to tintColor.copy(alpha = safeOpacity * 0.44f),
+                        1f to tintColor.copy(alpha = safeOpacity),
+                    ),
+                ),
+            ),
+        content = content,
+    )
+}
